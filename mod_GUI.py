@@ -95,7 +95,7 @@ def transmitir_audio():
         analytic = hilbert(audio)
         ssb = np.real(analytic * np.exp(1j * 2 * np.pi * fc * t))
 
-        tono_inicio = tono(13000, 0.7)
+        tono_inicio = tono(15000, 0.7)
         tono_final = tono(3000, 0.5)
         retardo = np.zeros(int(0.2 * fs))
         senal_tx = np.concatenate((retardo, tono_inicio, ssb, tono_final))
