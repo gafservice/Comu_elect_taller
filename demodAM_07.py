@@ -13,7 +13,7 @@ def butter_lowpass(cutoff, fs, order=6):
     b, a = butter(order, cutoff / nyq, btype='low')
     return b, a
 
-def butter_bandpass(cutoff, fs, order = 6):
+def butter_bandpass(cutoff,lowcut,highcut, fs, order):
     nyq = fs/2
     b, a = butter(order, [lowcut / nyq, highcut / nyq], btype='band')
     return b, a
@@ -47,7 +47,7 @@ def main():
     sd.default.samplerate = fs
     sd.default.channels = 1
 
-    print("🔁 Sistema activo. Esperando tono de 10000 Hz...")
+    print("🔁 Sistema activo. Esperando tono de 13000 Hz...")
 
     while True:
         print("🕑 Esperando 0.5 segundos antes de iniciar...")
@@ -61,7 +61,7 @@ def main():
         def callback_inicial(indata, frames, time_info, status):
             nonlocal inicio_detectado, espectro_guardado, mensaje
             bloque = indata[:, 0]
-            detectado, f, S = detectar_tono(bloque, 10000, fs, margen=30, umbral=umbral_inicio)
+            detectado, f, S = detectar_tono(bloque, 13000, fs, margen=30, umbral=umbral_inicio)
             if detectado and not inicio_detectado:
                 inicio_detectado = True
                 mensaje.append(bloque.copy())
@@ -108,7 +108,7 @@ def main():
                 pass
 
         mensaje = np.concatenate(mensaje)
-        b_bp, a_bp = butter_bandpass(9000, 11000, fs, order=6)
+        b_bp, a_bp = butter_bandpass(10000,9000, 11000, fs,6)
         mensaje_filtrado = filtfilt(b_bp, a_bp, mensaje)
         t = np.arange(len(mensaje)) / fs
         portadora = np.cos(2 * np.pi * fc * t)
