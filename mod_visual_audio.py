@@ -38,7 +38,7 @@ def tono(frecuencia, duracion):
     t = np.arange(int(fs * duracion)) / fs
     return 0.8 * np.sin(2 * np.pi * frecuencia * t)
 
-tono_inicio = tono(5000, 0.7)
+tono_inicio = tono(10000, 0.7)
 tono_final = tono(3000, 0.5)
 retardo = np.zeros(int(0.2 * fs))  # 0.2 s de silencio
 
