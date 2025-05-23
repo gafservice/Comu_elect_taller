@@ -13,6 +13,11 @@ def butter_lowpass(cutoff, fs, order=6):
     b, a = butter(order, cutoff / nyq, btype='low')
     return b, a
 
+def butter_bandpass(cutoff, fs, order = 6):
+    nyq = fs/2
+    b, a = butter(order, [lowcut / nyq, highcut / nyq], btype='band')
+    return b, a
+
 def detectar_tono(bloque, tono, fs, margen=30, umbral=10):
     N = len(bloque)
     f = np.fft.rfftfreq(N, 1/fs)
@@ -103,6 +108,8 @@ def main():
                 pass
 
         mensaje = np.concatenate(mensaje)
+        b_bp, a_bp = butter_bandpass(9000, 11000, fs, order=6)
+        mensaje_filtrado = filtfilt(b_bp, a_bp, mensaje)
         t = np.arange(len(mensaje)) / fs
         portadora = np.cos(2 * np.pi * fc * t)
         baseband = mensaje * portadora
