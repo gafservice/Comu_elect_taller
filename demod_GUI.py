@@ -110,7 +110,7 @@ class AudioListenerApp:
                 if not self.listening:
                     raise sd.CallbackStop()
                 bloque = indata[:, 0]
-                detectado, f, S = detectar_tono(bloque, 13000, self.fs, margen=30, umbral=self.umbral_inicio)
+                detectado, f, S = detectar_tono(bloque, 15000, self.fs, margen=30, umbral=self.umbral_inicio)
                 if detectado and not self.inicio_detectado:
                     self.inicio_detectado = True
                     self.mensaje.append(bloque.copy())
@@ -119,7 +119,7 @@ class AudioListenerApp:
                         nombre_png = siguiente_nombre().replace('.wav', '_espectro.png')
                         plt.figure()
                         plt.plot(f, S)
-                        plt.title("Espectro al detectar el tono de inicio (13000 Hz)")
+                        plt.title("Espectro al detectar el tono de inicio (15000 Hz)")
                         plt.xlabel("Frecuencia [Hz]")
                         plt.ylabel("Magnitud")
                         plt.grid()
@@ -167,7 +167,7 @@ class AudioListenerApp:
             self.log_message("🎞 Procesando señal...")
 
             mensaje_array = np.concatenate(self.mensaje)
-            b_bp, a_bp = butter_bandpass(self.fc, 9000, 11000, self.fs, 6)
+            b_bp, a_bp = butter_bandpass(self.fc, 9000, 11000, self.fs,8)
             mensaje_filtrado = filtfilt(b_bp, a_bp, mensaje_array)
             t = np.arange(len(mensaje_array)) / self.fs
             portadora = np.cos(2 * np.pi * self.fc * t)
