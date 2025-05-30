@@ -20,7 +20,7 @@ archivo_R_ISB = 'audio_R_ISB.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.2
-TONO_INICIO = 10000
+TONO_INICIO = 15000
 TONO_FIN = 15000
 
 # === Funciones auxiliares ===
@@ -45,11 +45,29 @@ def cargar_audio(nombre_archivo):
 
 def modulacion_ssb(audio, tipo):
     t = np.arange(len(audio)) / FS
-    analytic = hilbert(audio)
+    # --- Modulación SSB ---
+    fc = 40000  # Frecuencia portadora.
+
+    carrier_cos = np.cos(2*np.pi*fc*t)
+    carrier_sin = np.sin(2*np.pi*fc*t)
+
+    #señal analitica (transformada de Hilbert).
+    analytic = np.imag(hilbert(audio))
+
+    #Modulacion SSB-SC.
     if tipo == "USB":
-        return np.real(analytic * np.exp(1j * 2 * np.pi * FC * t))
+        ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # USB
+        #FFT de la señal SSB-SC.
+    ssb_sc_lsb_fft = np.abs(np.fft.fft(ssb_sc_lsb))
+        ssb_sc_usb_fft = np.abs(np.fft.fft(ssb_sc_usb))
+        #Conversion del espectro a dB.
+    ssb_sc_lsb_fft_db = 20 * np.log10(ssb_sc_lsb_fft)
+        ssb_sc_usb_fft_db = 20 * np.log10(ssb_sc_usb_fft)
+
+        return ssb_sc_usb
     else:
-        return np.real(analytic * np.exp(-1j * 2 * np.pi * FC * t))
+        ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # LSB
+        return ssb_sc_lsb
 
 def modulacion_ssb_fc(audio, tipo):
     t = np.arange(len(audio)) / FS
