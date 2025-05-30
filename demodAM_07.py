@@ -47,6 +47,7 @@ def main():
     sd.default.samplerate = fs
     sd.default.channels = 1
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< Updated upstream
     print("🔁 Sistema activo. Esperando tono de 7000 Hz...")
@@ -56,6 +57,9 @@ def main():
 =======
     print("🔁 Sistema activo. Esperando tono de 13000 Hz...")
 >>>>>>> f103227e4ba8464826751354b5ae8390e61859b3
+=======
+    print("🔁 Sistema activo. Esperando tono de 5000 Hz...")
+>>>>>>> Stashed changes
 
     while True:
         print("🕑 Esperando 0.5 segundos antes de iniciar...")
@@ -69,6 +73,7 @@ def main():
         def callback_inicial(indata, frames, time_info, status):
             nonlocal inicio_detectado, espectro_guardado, mensaje
             bloque = indata[:, 0]
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< Updated upstream
             detectado, f, S = detectar_tono(bloque, 7000, fs, margen=30, umbral=umbral_inicio)
@@ -78,6 +83,9 @@ def main():
 =======
             detectado, f, S = detectar_tono(bloque, 13000, fs, margen=30, umbral=umbral_inicio)
 >>>>>>> f103227e4ba8464826751354b5ae8390e61859b3
+=======
+            detectado, f, S = detectar_tono(bloque, 5000, fs, margen=30, umbral=umbral_inicio)
+>>>>>>> Stashed changes
             if detectado and not inicio_detectado:
                 inicio_detectado = True
                 mensaje.append(bloque.copy())
