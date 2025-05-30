@@ -63,6 +63,7 @@ def modulacion_ssb(audio, tipo):
 
 def modulacion_ssb_fc(audio, tipo):
     t = np.arange(len(audio)) / FS
+    
     carrier_cos = np.cos(2*np.pi*FC*t)
     carrier_sin = np.sin(2*np.pi*FC*t)
 
@@ -71,9 +72,11 @@ def modulacion_ssb_fc(audio, tipo):
 
     #Modulacion SSB-FC.
     if tipo == "USB":
+        ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # SC-USB
         ssb_fc_lsb = np.real(2 * carrier_cos + ssb_sc_lsb) # LSB, Ac = 2
         return ssb_fc_lsb    
     else:
+        ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # SC-LSB
         ssb_fc_usb = np.real(2 * carrier_cos + ssb_sc_usb) # USB, Ac = 2
         return ssb_fc_usb
 
