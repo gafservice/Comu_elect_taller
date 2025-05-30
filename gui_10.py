@@ -20,8 +20,8 @@ archivo_R_ISB = 'audio_R_ISB.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.2
-TONO_INICIO = 10000
-TONO_FIN = 10000
+TONO_INICIO = 8000
+TONO_FIN = 8000
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
@@ -72,6 +72,9 @@ def modulacion_ssb(audio, tipo):
         plt.xlabel("Frecuencia (Hz)")
         plt.ylabel("Magnitud (dB)")
         plt.grid()
+
+        plt.tight_layout()
+        plt.show()
         
         return ssb_sc_usb
     else:
