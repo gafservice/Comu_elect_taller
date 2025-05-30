@@ -20,8 +20,8 @@ archivo_R_ISB = 'audio_R_ISB.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.2
-TONO_INICIO = 15000
-TONO_FIN = 15000
+TONO_INICIO = 10000
+TONO_FIN = 10000
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
@@ -58,15 +58,28 @@ def modulacion_ssb(audio, tipo):
     if tipo == "USB":
         ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # USB
         #FFT de la señal SSB-SC.
-    ssb_sc_lsb_fft = np.abs(np.fft.fft(ssb_sc_lsb))
         ssb_sc_usb_fft = np.abs(np.fft.fft(ssb_sc_usb))
         #Conversion del espectro a dB.
-    ssb_sc_lsb_fft_db = 20 * np.log10(ssb_sc_lsb_fft)
         ssb_sc_usb_fft_db = 20 * np.log10(ssb_sc_usb_fft)
 
+        # Graficar.
+        plt.figure(figsize=(20, 16))
+
+        #Espectro de la modulacion SSB-SC-USB.
+        plt.subplot(5, 1, 1)
+        plt.plot(f[mask], ssb_sc_usb_fft_db[mask])
+        plt.title("Espectro de la modulacion SSB-SC-USB")
+        plt.xlabel("Frecuencia (Hz)")
+        plt.ylabel("Magnitud (dB)")
+        plt.grid()
+        
         return ssb_sc_usb
     else:
         ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # LSB
+        #FFT de la señal SSB-SC.
+        ssb_sc_lsb_fft = np.abs(np.fft.fft(ssb_sc_lsb))
+        #Conversion del espectro a dB.
+        ssb_sc_lsb_fft_db = 20 * np.log10(ssb_sc_lsb_fft)
         return ssb_sc_lsb
 
 def modulacion_ssb_fc(audio, tipo):
