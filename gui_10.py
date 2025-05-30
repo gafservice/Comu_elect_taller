@@ -29,7 +29,8 @@ def suavizar(audio, N=5):
 
 def generar_tono(freq, duracion, fs):
     t = np.arange(int(fs * duracion)) / fs
-    return 0.7 * np.sin(2 * np.pi * freq * t)
+    A = 0.7 # Amplitud del tono.
+    return A * np.sin(2 * np.pi * freq * t)
 
 def reproducir_senal(senal, fs):
     sd.play(senal, fs)
