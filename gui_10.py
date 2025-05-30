@@ -1,163 +1,250 @@
-import numpy as np
+import tkinter as tk
+from PIL import Image, ImageTk
 import sounddevice as sd
-from scipy.io import wavfile
+import numpy as np
+from scipy.io.wavfile import write, read
 from scipy.signal import hilbert
+import os
+import threading
 import matplotlib.pyplot as plt
 
-fc = 10000  # Frecuencia fija de la portadora
+# === Parámetros ===
+fs = 48000
+duracion = 5
+archivo_estereo = 'audio_estereo.wav'
+archivo_mono = 'audio_mono.wav'
+archivo_L_ISB = 'audio_L_ISB.wav'
+archivo_R_ISB = 'audio_R_ISB.wav'
 
-def tono(frec, dur, fs):
-    t = np.arange(0, int(fs * dur)) / fs
-    return 0.7 * np.sin(2 * np.pi * frec * t)
+# === Parámetros de modulación ===
+FS = 44100
+FC = 10000
+DUR_TONO = 0.2
+TONO_INICIO = 7000
+TONO_FIN = 5000
 
-def graficar_espectro(x, fs, titulo):
-    N = len(x)
-    f = np.fft.fftfreq(N, d=1/fs)
-    X = np.abs(np.fft.fft(x))
-    X = np.clip(X, 0, 50)
-    plt.figure()
-    plt.plot(f[:N//2], X[:N//2])
-    plt.title(titulo)
-    plt.xlabel("Frecuencia [Hz]")
-    plt.ylabel("Magnitud")
-    plt.grid(True)
-    plt.show(block=False)
+# === Funciones auxiliares ===
+def suavizar(audio, N=5):
+    return np.convolve(audio, np.ones(N)/N, mode='same').astype(np.int16)
 
-def graficar_tiempo(x, fs, titulo):
-    t = np.arange(len(x)) / fs
-    plt.figure()
-    plt.plot(t[:int(fs*0.005)], x[:int(fs*0.005)])
-    plt.title(titulo)
-    plt.xlabel("Tiempo [s]")
-    plt.ylabel("Amplitud")
-    plt.grid(True)
-    plt.show(block=False)
+def generar_tono(freq, duracion, fs):
+    t = np.arange(int(fs * duracion)) / fs
+    return 0.7 * np.sin(2 * np.pi * freq * t)
 
-def graficar_espectro_isb(lsb, usb, fs):
-    N = len(lsb)
-    f = np.fft.fftfreq(N, d=1/fs)
-    S_lsb = np.abs(np.fft.fft(lsb))
-    S_usb = np.abs(np.fft.fft(usb))
-    S_lsb = np.clip(S_lsb, 0, 50)
-    S_usb = np.clip(S_usb, 0, 50)
-    plt.figure()
-    plt.plot(f[:N//2], S_lsb[:N//2], label="LSB (audio_L_ISB)", linestyle='--')
-    plt.plot(f[:N//2], S_usb[:N//2], label="USB (audio_R_ISB)", linestyle='-')
-    plt.title("Espectro combinado de ISB")
-    plt.xlabel("Frecuencia [Hz]")
-    plt.ylabel("Magnitud")
-    plt.legend()
-    plt.grid(True)
-    plt.show(block=False)
+def reproducir_senal(senal, fs):
+    sd.play(senal, fs)
+    sd.wait()
 
-def cargar_audio_mono():
-    fs, audio = wavfile.read("audio_mono.wav")
+def cargar_audio(nombre_archivo):
+    fs, audio = read(nombre_archivo)
     audio = audio.astype(np.float32)
-    audio = audio if audio.ndim == 1 else audio.mean(axis=1)
-    audio -= np.mean(audio)
+    if audio.ndim == 2:
+        audio = audio.mean(axis=1)
     audio /= np.max(np.abs(audio))
     return fs, audio
 
-def modulacion_ssb(audio, fs, banda='USB'):
-    t = np.arange(len(audio)) / fs
+def modulacion_ssb(audio, tipo):
+    t = np.arange(len(audio)) / FS
     analytic = hilbert(audio)
-    if banda == 'USB':
-        ssb = np.real(analytic * np.exp(1j * 2 * np.pi * fc * t))
+    if tipo == "USB":
+        return np.real(analytic * np.exp(1j * 2 * np.pi * FC * t))
     else:
-        ssb = np.real(np.conj(analytic) * np.exp(1j * 2 * np.pi * fc * t))
-    return ssb
+        return np.real(analytic * np.exp(-1j * 2 * np.pi * FC * t))
 
-def modulacion_ssb_fc(audio, fs, banda='USB'):
-    t = np.arange(len(audio)) / fs
-    analytic = hilbert(audio)
-    if banda == 'USB':
-        ssb = np.real(analytic * np.exp(1j * 2 * np.pi * fc * t))
-    else:
-        ssb = np.real(np.conj(analytic) * np.exp(1j * 2 * np.pi * fc * t))
-    carrier = np.cos(2 * np.pi * fc * t)
-    return carrier + ssb
+def modulacion_ssb_fc(audio, tipo):
+    t = np.arange(len(audio)) / FS
+    carrier = np.cos(2 * np.pi * FC * t)
+    ssb = modulacion_ssb(audio, tipo)
+    return ssb + audio * carrier
 
-def modulacion_isb():
-    fs_L, audio_L = wavfile.read("audio_L_ISB.wav")
-    fs_R, audio_R = wavfile.read("audio_R_ISB.wav")
-    assert fs_L == fs_R
-    fs = fs_L
-    audio_L = audio_L.astype(np.float32)
-    audio_R = audio_R.astype(np.float32)
-    audio_L = audio_L if audio_L.ndim == 1 else audio_L.mean(axis=1)
-    audio_R = audio_R if audio_R.ndim == 1 else audio_R.mean(axis=1)
-    audio_L -= np.mean(audio_L)
-    audio_R -= np.mean(audio_R)
-    audio_L /= np.max(np.abs(audio_L))
-    audio_R /= np.max(np.abs(audio_R))
-    N = min(len(audio_L), len(audio_R))
-    t = np.arange(N) / fs
-    analytic_L = hilbert(audio_L[:N])
-    analytic_R = hilbert(audio_R[:N])
-    lsb = np.real(np.conj(analytic_L) * np.exp(1j * 2 * np.pi * fc * t))
-    usb = np.real(analytic_R * np.exp(1j * 2 * np.pi * fc * t))
-    isb = lsb + usb
-    return isb, fs, lsb, usb
+def modulacion_isb(audio_L, audio_R):
+    t = np.arange(len(audio_L)) / FS
+    analytic_L = hilbert(audio_L)
+    analytic_R = hilbert(audio_R)
+    lsb = np.real(analytic_L * np.exp(-1j * 2 * np.pi * FC * t))
+    usb = np.real(analytic_R * np.exp(1j * 2 * np.pi * FC * t))
+    return lsb + usb
 
-def ejecutar_modulacion():
-    while True:
-        print("\nSeleccione el tipo de modulación:")
-        print("1. Modulación SSB-SC (USB)")
-        print("2. Modulación SSB-SC (LSB)")
-        print("3. Modulación SSB-FC (USB)")
-        print("4. Modulación SSB-FC (LSB)")
-        print("5. Modulación ISB")
-        print("6. Salir")
-        opcion = input("Ingrese el número de su selección: ")
+# === Función auxiliar para actualizar estado durante la grabación ===
+def actualizar_tiempo(estado_var, grabando_flag, duracion):
+    def actualizar(segundos=[0]):
+        if not grabando_flag[0]:
+            return
+        estado_var.set(f"🎙️ Grabando... {segundos[0]}s")
+        root.update()
+        segundos[0] += 1
+        if segundos[0] <= duracion:
+            root.after(1000, lambda: actualizar(segundos))
+    actualizar()
 
-        if opcion in ['1', '2', '3', '4']:
-            fs, audio = cargar_audio_mono()
+# === Función: GRABAR ===
+def grabar_audio():
+    thread = threading.Thread(target=grabar_en_hilo)
+    thread.start()
 
-        if opcion == '1':
-            ssb = modulacion_ssb(audio, fs, 'USB')
-            señal_total = np.concatenate((tono(7000, 0.2, fs), ssb, tono(5000, 0.2, fs)))
-            sd.play(señal_total, fs, blocking=True)
-            graficar_tiempo(ssb, fs, "AM-SSB-SC USB (tiempo)")
-            graficar_espectro(ssb, fs, "AM-SSB-SC USB (frecuencia)")
+def grabar_en_hilo():
+    estado_var.set("🎙️ Preparando grabación...")
+    root.update()
+    try:
+        dispositivo = None
+        for i, d in enumerate(sd.query_devices()):
+            if d['max_input_channels'] >= 2:
+                dispositivo = i
+                break
+        if dispositivo is None:
+            raise RuntimeError("No se encontró dispositivo de entrada estéreo.")
 
-        elif opcion == '2':
-            ssb = modulacion_ssb(audio, fs, 'LSB')
-            señal_total = np.concatenate((tono(7000, 0.2, fs), ssb, tono(5000, 0.2, fs)))
-            sd.play(señal_total, fs, blocking=True)
-            graficar_tiempo(ssb, fs, "AM-SSB-SC LSB (tiempo)")
-            graficar_espectro(ssb, fs, "AM-SSB-SC LSB (frecuencia)")
+        grabando_flag = [True]
+        root.after(0, lambda: actualizar_tiempo(estado_var, grabando_flag, duracion))
 
-        elif opcion == '3':
-            ssb_fc = modulacion_ssb_fc(audio, fs, 'USB')
-            señal_total = np.concatenate((tono(7000, 0.2, fs), ssb_fc, tono(5000, 0.2, fs)))
-            sd.play(señal_total, fs, blocking=True)
-            graficar_tiempo(ssb_fc, fs, "AM-SSB-FC USB (tiempo)")
-            graficar_espectro(ssb_fc, fs, "AM-SSB-FC USB (frecuencia)")
+        audio_estereo = sd.rec(int(duracion * fs), samplerate=fs, channels=2, dtype='int16', device=dispositivo)
+        sd.wait()
+        grabando_flag[0] = False
 
-        elif opcion == '4':
-            ssb_fc = modulacion_ssb_fc(audio, fs, 'LSB')
-            señal_total = np.concatenate((tono(7000, 0.2, fs), ssb_fc, tono(5000, 0.2, fs)))
-            sd.play(señal_total, fs, blocking=True)
-            graficar_tiempo(ssb_fc, fs, "AM-SSB-FC LSB (tiempo)")
-            graficar_espectro(ssb_fc, fs, "AM-SSB-FC LSB (frecuencia)")
+        estado_var.set("💾 Guardando estéreo...")
+        root.update()
+        write(archivo_estereo, fs, audio_estereo)
 
-        elif opcion == '5':
-            isb, fs, lsb, usb = modulacion_isb()
-            señal_total = np.concatenate((tono(7000, 0.2, fs), isb, tono(5000, 0.2, fs)))
-            sd.play(señal_total, fs, blocking=True)
-            graficar_tiempo(isb, fs, "Señal ISB (tiempo)")
-            graficar_espectro(isb, fs, "Espectro total ISB")
-            graficar_espectro_isb(lsb, usb, fs)
+        estado_var.set("🎚️ Procesando mono...")
+        root.update()
+        audio_mono = np.mean(audio_estereo, axis=1).astype(np.int16)
+        audio_mono_suave = suavizar(audio_mono)
+        write(archivo_mono, fs, audio_mono_suave)
 
-        elif opcion == '6':
-            print("Saliendo...")
-            break
+        estado_var.set("🎚️ Guardando ISB - L")
+        root.update()
+        write(archivo_L_ISB, fs, audio_estereo[:, 0])
 
+        estado_var.set("🎚️ Guardando ISB - R ")
+        root.update()
+        write(archivo_R_ISB, fs, audio_estereo[:, 1])
+
+        estado_var.set("✅ Grabación y archivos Listos.")
+        root.update()
+
+    except Exception as e:
+        estado_var.set(f"❌ Error: {e}")
+        print("[ERROR]", e)
+
+# === Función: REPRODUCIR ===
+def reproducir_todo():
+    try:
+        secuencias = [
+            (archivo_estereo, "🔊 Estéreo"),
+            (archivo_mono, "🔊 Mono suavizado"),
+            (archivo_L_ISB, "🔊 ISB L"),
+            (archivo_R_ISB, "🔊 ISB R")
+        ]
+        for archivo, descripcion in secuencias:
+            if not os.path.exists(archivo):
+                estado_var.set(f"⚠️ Falta archivo: {archivo}")
+                root.update()
+                continue
+            estado_var.set(descripcion)
+            root.update()
+            fs_leido, datos = read(archivo)
+            sd.play(datos, fs_leido)
+            sd.wait()
+        estado_var.set("✅ Reproducción completada.")
+    except Exception as e:
+        estado_var.set(f"❌ Error reproducción: {e}")
+        print("[ERROR]", e)
+
+# === Funciones de botones de modulación ===
+def ejecutar_modulacion(tipo_modulacion, banda):
+    try:
+        fs, audio = cargar_audio(archivo_mono)
+        estado_var.set(f"⚙️ Modulando {tipo_modulacion}-{banda}...")
+        root.update()
+        tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
+        tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
+
+        if tipo_modulacion == "SC":
+            salida = modulacion_ssb(audio, banda)
+        elif tipo_modulacion == "FC":
+            salida = modulacion_ssb_fc(audio, banda)
         else:
-            print("Opción inválida.")
+            estado_var.set("❌ Tipo no reconocido")
+            return
 
-        input("✅ Presione Enter para volver al menú principal...")
+        total = np.concatenate((tono_i, salida, tono_f))
+        estado_var.set(f"🔊 Reproduciendo {tipo_modulacion}-{banda}")
+        reproducir_senal(total, FS)
+        estado_var.set(f"✅ {tipo_modulacion}-{banda} completado.")
+    except Exception as e:
+        estado_var.set(f"❌ Error: {e}")
+        print("[ERROR]", e)
 
-if __name__ == '__main__':
-    ejecutar_modulacion()
+def ejecutar_isb():
+    try:
+        fsL, audioL = cargar_audio(archivo_L_ISB)
+        fsR, audioR = cargar_audio(archivo_R_ISB)
+        estado_var.set("⚙️ Modulando ISB...")
+        root.update()
+        tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
+        tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
+
+        isb = modulacion_isb(audioL, audioR)
+        total = np.concatenate((tono_i, isb, tono_f))
+        estado_var.set("🔊 Reproduciendo ISB")
+        reproducir_senal(total, FS)
+        estado_var.set("✅ ISB completado.")
+    except Exception as e:
+        estado_var.set(f"❌ Error ISB: {e}")
+        print("[ERROR]", e)
+
+# === Interfaz Gráfica ===
+imagen_path = "walki.png"
+imagen = Image.open(imagen_path)
+ancho, alto = imagen.size
+
+botones = {
+    "GRABAR":     (113, 163, 72, 14),
+    "REPRODUCIR": (252, 163, 93, 14),
+    "SSB-SCL":    (77, 216, 71, 15),
+    "SSB-FCU":    (177, 216, 69, 15),
+    "SSB-FCL":    (272, 216, 70, 15),
+    "SSB-FCL_2":  (78, 262, 69, 15),
+    "ISB":        (177, 262, 70, 15),
+    "ESC":        (313, 384, 26, 13)
+}
+
+root = tk.Tk()
+root.title("Modulador AM")
+root.geometry(f"{ancho}x{alto}")
+root.resizable(False, False)
+
+imagen_tk = ImageTk.PhotoImage(imagen)
+canvas = tk.Canvas(root, width=ancho, height=alto)
+canvas.pack()
+canvas.create_image(0, 0, anchor="nw", image=imagen_tk)
+
+estado_var = tk.StringVar(value="")
+tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(
+    x=70, y=315, width=260)
+
+# === Botones funcionales ===
+for nombre, (x, y, w, h) in botones.items():
+    etiqueta = nombre if "SSB-FCL_2" not in nombre else "SSB-FCL"
+    if etiqueta == "GRABAR":
+        comando = grabar_audio
+    elif etiqueta == "REPRODUCIR":
+        comando = reproducir_todo
+    elif etiqueta == "ESC":
+        comando = root.destroy
+    elif etiqueta == "SSB-SCL":
+        comando = lambda: ejecutar_modulacion("SC", "LSB")
+    elif etiqueta == "SSB-FCU":
+        comando = lambda: ejecutar_modulacion("FC", "USB")
+    elif etiqueta == "SSB-FCL":
+        comando = lambda: ejecutar_modulacion("FC", "LSB")
+    elif etiqueta == "ISB":
+        comando = ejecutar_isb
+    else:
+        comando = lambda n=etiqueta: estado_var.set(f"Presionado: {n}")
+
+    tk.Button(root, text=etiqueta, command=comando,
+              bg="#222", fg="white", font=("Arial", 9)).place(x=x, y=y, width=w, height=h)
+
+root.mainloop()
 

@@ -4,7 +4,6 @@ import sounddevice as sd
 import numpy as np
 from scipy.io.wavfile import write, read
 import os
-import threading
 
 # === Parámetros ===
 fs = 48000
@@ -13,30 +12,22 @@ archivo_estereo = 'audio_estereo.wav'
 archivo_mono = 'audio_mono.wav'
 archivo_L_ISB = 'audio_L_ISB.wav'
 archivo_R_ISB = 'audio_R_ISB.wav'
+frecuencia_tono_L = 18000
+frecuencia_tono_R = 20000
+amplitud_tono = 224
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
     return np.convolve(audio, np.ones(N)/N, mode='same').astype(np.int16)
 
-# === Función auxiliar para actualizar estado durante la grabación ===
-def actualizar_tiempo(estado_var, grabando_flag, duracion):
-    def actualizar(segundos=[0]):
-        if not grabando_flag[0]:
-            return
-        estado_var.set(f"🎙️ Grabando... {segundos[0]}s")
-        root.update()
-        segundos[0] += 1
-        if segundos[0] <= duracion:
-            root.after(1000, lambda: actualizar(segundos))
-    actualizar()
+def generar_tono(frecuencia, duracion, fs):
+    t = np.linspace(0, duracion, int(fs * duracion), endpoint=False)
+    tono = amplitud_tono * np.sin(2 * np.pi * frecuencia * t)
+    return tono.astype(np.int16)
 
 # === Función: GRABAR ===
 def grabar_audio():
-    thread = threading.Thread(target=grabar_en_hilo)
-    thread.start()
-
-def grabar_en_hilo():
-    estado_var.set("🎙️ Preparando grabación...")
+    estado_var.set("🎙️ Grabando...")
     root.update()
     try:
         dispositivo = None
@@ -47,13 +38,8 @@ def grabar_en_hilo():
         if dispositivo is None:
             raise RuntimeError("No se encontró dispositivo de entrada estéreo.")
 
-        grabando_flag = [True]
-        root.after(0, lambda: actualizar_tiempo(estado_var, grabando_flag, duracion))
-
         audio_estereo = sd.rec(int(duracion * fs), samplerate=fs, channels=2, dtype='int16', device=dispositivo)
         sd.wait()
-        grabando_flag[0] = False
-
         estado_var.set("💾 Guardando estéreo...")
         root.update()
         write(archivo_estereo, fs, audio_estereo)
@@ -64,15 +50,19 @@ def grabar_en_hilo():
         audio_mono_suave = suavizar(audio_mono)
         write(archivo_mono, fs, audio_mono_suave)
 
-        estado_var.set("🎚️ Guardando ISB - L")
+        estado_var.set("🎚️ Generando ISB - L...")
         root.update()
-        write(archivo_L_ISB, fs, audio_estereo[:, 0])
+        tono_L = generar_tono(frecuencia_tono_L, duracion, fs)
+        audio_L = np.clip(audio_estereo[:, 0] + tono_L[:len(audio_estereo)], -32768, 32767)
+        write(archivo_L_ISB, fs, audio_L.astype(np.int16))
 
-        estado_var.set("🎚️ Guardando ISB - R ")
+        estado_var.set("🎚️ Generando ISB - R...")
         root.update()
-        write(archivo_R_ISB, fs, audio_estereo[:, 1])
+        tono_R = generar_tono(frecuencia_tono_R, duracion, fs)
+        audio_R = np.clip(audio_estereo[:, 1] + tono_R[:len(audio_estereo)], -32768, 32767)
+        write(archivo_R_ISB, fs, audio_R.astype(np.int16))
 
-        estado_var.set("✅ Grabación y archivos Listos.")
+        estado_var.set("✅ Grabación completada y archivos generados.")
         root.update()
 
     except Exception as e:
@@ -85,8 +75,8 @@ def reproducir_todo():
         secuencias = [
             (archivo_estereo, "🔊 Estéreo"),
             (archivo_mono, "🔊 Mono suavizado"),
-            (archivo_L_ISB, "🔊 ISB L"),
-            (archivo_R_ISB, "🔊 ISB R")
+            (archivo_L_ISB, "🔊 ISB L (6000 Hz)"),
+            (archivo_R_ISB, "🔊 ISB R (8000 Hz)")
         ]
         for archivo, descripcion in secuencias:
             if not os.path.exists(archivo):
@@ -115,7 +105,6 @@ botones = {
     "SSB-FCU":    (177, 216, 69, 15),
     "SSB-FCL":    (272, 216, 70, 15),
     "SSB-FCL_2":  (78, 262, 69, 15),
-    "ISB":        (177, 262, 70, 15),
     "ESC":        (313, 384, 26, 13)
 }
 
