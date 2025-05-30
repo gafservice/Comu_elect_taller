@@ -236,9 +236,9 @@ botones = {
     "GRABAR":     (113, 163, 72, 14),
     "REPRODUCIR": (252, 163, 93, 14),
     "SSB-SCL":    (77, 216, 71, 15),
-    "SSB-FCU":    (177, 216, 69, 15),
+    "SSB-SCU":    (177, 216, 69, 15),
     "SSB-FCL":    (272, 216, 70, 15),
-    "SSB-FCL_2":  (78, 262, 69, 15),
+    "SSB-FCU":  (78, 262, 69, 15),
     "ISB":        (177, 262, 70, 15),
     "ESC":        (313, 384, 26, 13)
 }
@@ -268,6 +268,8 @@ for nombre, (x, y, w, h) in botones.items():
         comando = root.destroy
     elif etiqueta == "SSB-SCL":
         comando = lambda: ejecutar_modulacion("SC", "LSB")
+    elif etiqueta == "SSB-SCU":
+        comando = lambda: ejecutar_modulacion("SC", "USB")
     elif etiqueta == "SSB-FCU":
         comando = lambda: ejecutar_modulacion("FC", "USB")
     elif etiqueta == "SSB-FCL":
