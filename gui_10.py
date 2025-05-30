@@ -45,11 +45,9 @@ def cargar_audio(nombre_archivo):
 
 def modulacion_ssb(audio, tipo):
     t = np.arange(len(audio)) / FS
-    # --- Modulación SSB ---
-    fc = 40000  # Frecuencia portadora.
 
-    carrier_cos = np.cos(2*np.pi*fc*t)
-    carrier_sin = np.sin(2*np.pi*fc*t)
+    carrier_cos = np.cos(2*np.pi*FC*t)
+    carrier_sin = np.sin(2*np.pi*FC*t)
 
     #señal analitica (transformada de Hilbert).
     analytic = np.imag(hilbert(audio))
@@ -57,62 +55,48 @@ def modulacion_ssb(audio, tipo):
     #Modulacion SSB-SC.
     if tipo == "USB":
         ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # USB
-        #FFT de la señal SSB-SC.
-        ssb_sc_usb_fft = np.abs(np.fft.fft(ssb_sc_usb))
-        #Conversion del espectro a dB.
-        ssb_sc_usb_fft_db = 20 * np.log10(ssb_sc_usb_fft)
-
-        # Graficar.
-        plt.figure(figsize=(20, 16))
-
-        #Espectro de la modulacion SSB-SC-USB.
-        plt.subplot(5, 1, 1)
-        plt.plot(f[mask], ssb_sc_usb_fft_db[mask])
-        plt.title("Espectro de la modulacion SSB-SC-USB")
-        plt.xlabel("Frecuencia (Hz)")
-        plt.ylabel("Magnitud (dB)")
-        plt.grid()
-
-        plt.tight_layout()
-        plt.show()
-        
         return ssb_sc_usb
     else:
         ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # LSB
-        #FFT de la señal SSB-SC.
-        ssb_sc_lsb_fft = np.abs(np.fft.fft(ssb_sc_lsb))
-        #Conversion del espectro a dB.
-        ssb_sc_lsb_fft_db = 20 * np.log10(ssb_sc_lsb_fft)
-
-        # Graficar.
-        plt.figure(figsize=(20, 16))
-
-        #Espectro de la modulacion SSB-SC-USB.
-        plt.subplot(5, 1, 1)
-        plt.plot(f[mask], ssb_sc_usb_fft_db[mask])
-        plt.title("Espectro de la modulacion SSB-SC-USB")
-        plt.xlabel("Frecuencia (Hz)")
-        plt.ylabel("Magnitud (dB)")
-        plt.grid()
-
-        plt.tight_layout()
-        plt.show()
-        
         return ssb_sc_lsb
 
 def modulacion_ssb_fc(audio, tipo):
     t = np.arange(len(audio)) / FS
-    carrier = np.cos(2 * np.pi * FC * t)
-    ssb = modulacion_ssb(audio, tipo)
-    return ssb + audio * carrier
+    carrier_cos = np.cos(2*np.pi*FC*t)
+    carrier_sin = np.sin(2*np.pi*FC*t)
+
+    #señal analitica (transformada de Hilbert).
+    analytic = np.imag(hilbert(audio))
+
+    #Modulacion SSB-FC.
+    if tipo == "USB":
+        ssb_fc_lsb = np.real(2 * carrier_cos + ssb_sc_lsb) # LSB, Ac = 2
+        return ssb_fc_lsb    
+    else:
+        ssb_fc_usb = np.real(2 * carrier_cos + ssb_sc_usb) # USB, Ac = 2
+        return ssb_fc_usb
 
 def modulacion_isb(audio_L, audio_R):
     t = np.arange(len(audio_L)) / FS
-    analytic_L = hilbert(audio_L)
-    analytic_R = hilbert(audio_R)
-    lsb = np.real(analytic_L * np.exp(-1j * 2 * np.pi * FC * t))
-    usb = np.real(analytic_R * np.exp(1j * 2 * np.pi * FC * t))
-    return lsb + usb
+    carrier_cos = np.cos(2*np.pi*FC*t)
+    carrier_sin = np.sin(2*np.pi*FC*t)
+    
+    #Señal analitica del segundo audio.
+    analytic = np.imag(hilbert(audio_L))
+    analytic2 = np.imag(hilbert(audio_R))
+
+    #Modulacion ISB.
+    isb_usb = np.real(audio_L * carrier_cos - analytic * carrier_sin)
+    isb_lsb = np.real(audio_R * carrier_cos + analytic2 * carrier_sin)
+    isb = isb_usb + isb_lsb
+    return isb
+
+def fft_dB(senal_mod):
+    #FFT de la señal.
+    senal_fft = np.abs(np.fft.fft(senal_mod))
+    #conversion del espectro a dB.
+    senal_fft_db = 20 * np.log10(senal_fft)
+    return senal_fft_db
 
 # === Función auxiliar para actualizar estado durante la grabación ===
 def actualizar_tiempo(estado_var, grabando_flag, duracion):
