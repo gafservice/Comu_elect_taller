@@ -21,7 +21,7 @@ FS = 44100
 FC = 10000
 DUR_TONO = 0.2
 TONO_INICIO = 8000
-TONO_FIN = 8000
+TONO_FIN = 10000
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
@@ -83,6 +83,21 @@ def modulacion_ssb(audio, tipo):
         ssb_sc_lsb_fft = np.abs(np.fft.fft(ssb_sc_lsb))
         #Conversion del espectro a dB.
         ssb_sc_lsb_fft_db = 20 * np.log10(ssb_sc_lsb_fft)
+
+        # Graficar.
+        plt.figure(figsize=(20, 16))
+
+        #Espectro de la modulacion SSB-SC-USB.
+        plt.subplot(5, 1, 1)
+        plt.plot(f[mask], ssb_sc_usb_fft_db[mask])
+        plt.title("Espectro de la modulacion SSB-SC-USB")
+        plt.xlabel("Frecuencia (Hz)")
+        plt.ylabel("Magnitud (dB)")
+        plt.grid()
+
+        plt.tight_layout()
+        plt.show()
+        
         return ssb_sc_lsb
 
 def modulacion_ssb_fc(audio, tipo):
