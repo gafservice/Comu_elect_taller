@@ -149,12 +149,11 @@ analytic2 = np.imag(hilbert(audio2))
 #Modulacion ISB.
 isb_usb = np.real(audio * carrier_cos - analytic * carrier_sin)
 isb_lsb = np.real(audio2 * carrier_cos + analytic2 * carrier_sin)
+isb = isb_usb + isb_lsb
 #FFT de la señal ISB.
-isb_fft_usb = np.abs(np.fft.fft(isb_usb))
-isb_fft_lsb = np.abs(np.fft.fft(isb_lsb))
+isb_fft = np.abs(np.fft.fft(isb))
 #conversion del espectro a dB.
-isb_fft_db_usb = 20 * np.log10(isb_fft_usb)
-isb_fft_db_lsb = 20 * np.log10(isb_fft_lsb)
+isb_fft_db = 20 * np.log10(isb_fft)
 
 # Guardar señal modulada.
 np.save("ssb_modulada.npy", ssb_sc_lsb)
@@ -204,7 +203,7 @@ plt.grid()
 
 #Espectro de la modulacion ISB.
 plt.subplot(5, 1, 5)
-plt.plot(f[mask], isb_fft_db_usb[mask])
+plt.plot(f[mask], isb_fft_db[mask])
 plt.title("Espectro de la modulacion ISB")
 plt.xlabel("Frecuencia (Hz)")
 plt.ylabel("Magnitud (dB)")
