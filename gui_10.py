@@ -9,7 +9,7 @@ import threading
 import matplotlib.pyplot as plt
 
 # === Parámetros ===
-fs = 44100
+fs = 16000
 duracion = 5
 archivo_estereo = 'audio_estereo.wav'
 archivo_mono = 'audio_mono.wav'
@@ -17,7 +17,7 @@ archivo_L_ISB = 'audio_L_ISB.wav'
 archivo_R_ISB = 'audio_R_ISB.wav'
 
 # === Parámetros de modulación ===
-FS = 44100
+FS = 16000
 FC = 10000
 DUR_TONO = 0.2
 TONO_INICIO = 7000
