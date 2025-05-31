@@ -20,8 +20,8 @@ archivo_R_ISB = 'audio_R_ISB.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.2
-TONO_INICIO = 8000
-TONO_FIN = 15000
+TONO_INICIO = 7000
+TONO_FIN = 5000
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
