@@ -8,7 +8,7 @@ import os
 import threading
 
 # === Parámetros ===
-fs = 16000
+fs = 44100
 FS = fs
 duracion = 5
 
@@ -18,7 +18,7 @@ archivo_L_ISB = 'audio_L_ISB.wav'
 archivo_R_ISB = 'audio_R_ISB.wav'
 
 # === Parámetros de modulación ===
-FC = 15000
+FC = 10000
 DUR_TONO = 0.2
 TONO_INICIO = 7000
 TONO_FIN = 5000
@@ -105,7 +105,7 @@ def grabar_en_hilo():
     estado_var.set("🎧 Preparando grabación...")
     root.update()
     try:
-        dispositivo = 3
+        dispositivo = 0
         print("Usando dispositivo de entrada:", sd.query_devices()[dispositivo]['name'])
 
         grabando_flag = [True]
