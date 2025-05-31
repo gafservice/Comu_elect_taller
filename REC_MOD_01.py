@@ -1,8 +1,6 @@
 # Modulador ISB con Interfaz Gráfica
 
-Este código crea una interfaz gráfica en Python utilizando `tkinter` que permite seleccionar diferentes tipos de modulación (SSB-SC USB/LSB, SSB-FC USB/LSB, ISB), grabar audio, convertirlo a mono, generar señales ISB y visualizar en tiempo y frecuencia.
 
-```python
 import numpy as np
 import sounddevice as sd
 import tkinter as tk
