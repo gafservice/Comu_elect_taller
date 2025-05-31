@@ -65,7 +65,7 @@ def main():
                     nombre_png = siguiente_nombre().replace('.wav', '_espectro.png')
                     plt.figure()
                     plt.plot(f, S)
-                    plt.title("Espectro al detectar el tono de inicio (2000 Hz)")
+                    plt.title("Espectro al detectar el tono de inicio (8000 Hz)")
                     plt.xlabel("Frecuencia [Hz]")
                     plt.ylabel("Magnitud")
                     plt.grid()
@@ -84,7 +84,7 @@ def main():
                 print("⌛ No se detectó tono de inicio. Reiniciando...\n")
                 continue
 
-        print("⏺️ Grabando mensaje hasta detectar tono de fin (5000 Hz)...")
+        print("⏺️ Grabando mensaje hasta detectar tono de fin (15000 Hz)...")
 
         def callback_mensaje(indata, frames, time_info, status):
             nonlocal mensaje
