@@ -13,8 +13,8 @@ fs = 44100
 duracion = 5
 archivo_baja = 'audio_baja.wav'
 archivo_alta = 'audio_alta.wav'
-archivo_L_ISB = 'audio_L_ISB.wav'
-archivo_R_ISB = 'audio_R_ISB.wav'
+archivo_L_ISB = 'audio_baja.wav'
+archivo_R_ISB = 'audio_alta.wav'
 
 # === Parámetros de modulación ===
 FS = 44100
@@ -173,6 +173,14 @@ def ejecutar_isb():
     try:
         fsL, audioL = cargar_audio(archivo_L_ISB)
         fsR, audioR = cargar_audio(archivo_R_ISB)
+
+        # Asegurar que ambas señales tengan la misma longitud
+        min_len = min(len(audioL), len(audioR))
+        audioL = audioL[:min_len]
+        audioR = audioR[:min_len]
+
+
+
         estado_var.set("⚙️ Modulando ISB...")
         root.update()
 
