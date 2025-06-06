@@ -7,6 +7,8 @@ from scipy.signal import hilbert
 import os
 import threading
 import matplotlib.pyplot as plt
+import time
+
 # === Parámetros ===
 # === Parámetros ===
 # === Parámetros ===
@@ -148,9 +150,12 @@ def ejecutar_modulacion(tipo_modulacion, banda):
         root.update()
 
         graficar_senal_tiempo_frecuencia(audio, fs, "Audio Original", usar_analitica=True)
-
+        
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
+        reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
+        time.sleep(0.1)                  # 🕒 Pequeña pausa opcional entre tono y señal
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
+
 
         if tipo_modulacion == "SC":
             salida = modulacion_ssb(audio, banda)
@@ -187,9 +192,14 @@ def ejecutar_isb():
 
         graficar_senal_tiempo_frecuencia(audioL, fsL, "Audio L", usar_analitica=True)
         graficar_senal_tiempo_frecuencia(audioR, fsR, "Audio R", usar_analitica=True)
-
+        
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
+        reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
+        time.sleep(0.1)                  # 🕒 Pequeña pausa opcional entre tono y señal
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
+
+        
+        
         isb = modulacion_isb(audioL, audioR)
 
         graficar_senal_tiempo_frecuencia(isb, FS, "Modulada ISB", usar_analitica=True)
@@ -208,10 +218,10 @@ imagen = Image.open(imagen_path)
 ancho, alto = imagen.size
 
 botones = {
-    "GRABAR BAJA": (105, 163, 50, 16),
-    "GRABAR ALTA": (165, 163, 50, 16),
-    "REPRODUCIR BAJA": (250, 163, 50, 16),
-    "REPRODUCIR ALTA": (305, 163, 50, 16),
+    "G_BAJA": (105, 163, 50, 16),
+    "G_ALTA": (165, 163, 50, 16),
+    "R_BAJA": (250, 163, 50, 16),
+    "R_ALTA": (305, 163, 50, 16),
     "SSB-SCL": (77, 216, 71, 15),
     "SSB-SCU": (177, 216, 69, 15),
     "SSB-FCL": (272, 216, 70, 15),
@@ -234,13 +244,13 @@ estado_var = tk.StringVar(value="")
 tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(x=70, y=315, width=400)
 
 for nombre, (x, y, w, h) in botones.items():
-    if nombre == "GRABAR BAJA":
+    if nombre == "G_BAJA":
         comando = lambda: grabar_audio(archivo_baja)
-    elif nombre == "GRABAR ALTA":
+    elif nombre == "G_ALTA":
         comando = lambda: grabar_audio(archivo_alta)
-    elif nombre == "REPRODUCIR BAJA":
+    elif nombre == "R_BAJA":
         comando = lambda: reproducir_audio(archivo_baja)
-    elif nombre == "REPRODUCIR ALTA":
+    elif nombre == "R_ALTA":
         comando = lambda: reproducir_audio(archivo_alta)
     elif nombre == "ESC":
         comando = root.destroy
