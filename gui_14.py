@@ -9,6 +9,7 @@ import threading
 import matplotlib.pyplot as plt
 # === Parámetros ===
 # === Parámetros ===
+# === Parámetros ===
 fs = 44100
 duracion = 5
 archivo_baja = 'audio_baja.wav'
