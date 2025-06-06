@@ -7,7 +7,7 @@ from scipy.signal import hilbert
 import os
 import threading
 import matplotlib.pyplot as plt
-
+# === Parámetros ===
 # === Parámetros ===
 fs = 44100
 duracion = 5
