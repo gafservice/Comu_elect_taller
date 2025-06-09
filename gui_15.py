@@ -152,7 +152,7 @@ def ejecutar_modulacion(tipo_modulacion, banda):
         graficar_senal_tiempo_frecuencia(audio, fs, "Audio Original", usar_analitica=True)
         
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
-        reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
+        #reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
         time.sleep(0.1)                  # 🕒 Pequeña pausa opcional entre tono y señal
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
 
@@ -194,7 +194,7 @@ def ejecutar_isb():
         graficar_senal_tiempo_frecuencia(audioR, fsR, "Audio R", usar_analitica=True)
         
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
-        reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
+        #reproducir_senal(tono_i, FS)     # 🔊 Reproducir el tono antes
         time.sleep(0.1)                  # 🕒 Pequeña pausa opcional entre tono y señal
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
 
