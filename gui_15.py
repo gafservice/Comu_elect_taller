@@ -241,7 +241,7 @@ canvas.pack()
 canvas.create_image(0, 0, anchor="nw", image=imagen_tk)
 
 estado_var = tk.StringVar(value="")
-tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(x=70, y=315, width=400)
+tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(x=70, y=310, width=270)
 
 for nombre, (x, y, w, h) in botones.items():
     if nombre == "G_BAJA":
