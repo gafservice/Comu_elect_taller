@@ -35,19 +35,7 @@ def siguiente_nombre():
     return f"{base}{i:03d}.wav"
 
 def ssb_demodulate(signal, fc, fs, sideband='usb', is_fc=False):
-    """
-    Demodula una señal SSB.
-
-    Parámetros:
-    - signal: señal modulada (SSB-SC o SSB-FC)
-    - fc: frecuencia de la portadora
-    - fs: frecuencia de muestreo
-    - sideband: 'usb' o 'lsb'
-    - is_fc: True si es SSB-FC, False si es SSB-SC
-
-    Retorna:
-    - Señal demodulada (audio base)
-    """
+    #Demodulacion coherente con filtrado paso bajos.
 
     t = np.arange(len(signal)) / fs
 
@@ -72,9 +60,8 @@ def ssb_demodulate(signal, fc, fs, sideband='usb', is_fc=False):
     return recovered
 
 def envelope_demodulation(signal, fs, cutoff=20000):
-    """
-    Demodulación por detección de envolvente con filtrado pasa bajos.
-    """
+    # Demodulación por detección de envolvente con filtrado pasa bajos.
+    
     # Obtener la envolvente con Hilbert
     analytic_signal = hilbert(signal)
     envelope = np.abs(analytic_signal)
@@ -166,12 +153,6 @@ def main():
         mensaje = np.concatenate(mensaje)
         t = np.arange(len(mensaje)) / fs
 
-        #portadora = np.cos(2 * np.pi * fc * t)
-        #baseband = mensaje * portadora
-        #b, a = butter_lowpass(4000, fs)
-        #audio = filtfilt(b, a, baseband)
-        #audio /= np.max(np.abs(audio))
-
         # Demodulación coherente.
         #Caso SSB-SC.
         audio_rec_sc_usb = ssb_demodulate(mensaje, fc, fs, sideband='usb', is_fc=False)
@@ -189,13 +170,6 @@ def main():
         demodulada = audio_rec_isb_usb
         demodulada_fft = np.abs(np.fft.fft(demodulada))
         demodulada_fft_db = 20 * np.log10(demodulada_fft)
-        
-        #plt.figure()
-        #plt.plot(t, demodulada)
-        #plt.title("Mensaje demodulado (dominio del tiempo)")
-        #plt.xlabel("Tiempo [s]")
-        #plt.ylabel("Amplitud")
-        #plt.grid()
 
         # Graficar.
         plt.figure(figsize=(20, 16))
