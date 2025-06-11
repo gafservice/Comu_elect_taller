@@ -104,7 +104,11 @@ def main():
 
         mensaje = np.concatenate(mensaje)
         t = np.arange(len(mensaje)) / fs
-        portadora = np.cos(2 * np.pi * fc * t)
+        #Error de fase.
+        phi = 0
+        #Error de frecuencia.
+        deltaf = 0
+        portadora = np.cos(2 * np.pi * (fc + deltaf) * t + phi)
         baseband = mensaje * portadora
         b, a = butter_lowpass(4000, fs)
         audio = filtfilt(b, a, baseband)
