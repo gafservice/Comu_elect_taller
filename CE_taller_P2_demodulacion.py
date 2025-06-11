@@ -8,6 +8,7 @@ from scipy.io.wavfile import write
 import time
 import os
 
+#filtro Paso bajo.
 def butter_lowpass(cutoff, fs, order=6):
     nyq = fs / 2
     b, a = butter(order, cutoff / nyq, btype='low')
@@ -32,7 +33,9 @@ def siguiente_nombre():
     return f"{base}{i:03d}.wav"
 
 def main():
+    #frecuencia de muestreo.
     fs = 44100
+    #Frecuencia de portadora.
     fc = 10000
     blocksize = int(0.1 * fs)
     dur_max_mensaje = 10
@@ -102,12 +105,11 @@ def main():
             except sd.CallbackStop:
                 pass
 
+        #Demodulacion coherente.
         mensaje = np.concatenate(mensaje)
         t = np.arange(len(mensaje)) / fs
-        #Error de fase.
-        phi = 0
-        #Error de frecuencia.
-        deltaf = 0
+        phi = 0 # Error de fase.
+        deltaf = 0 # Error de frecuencia.
         portadora = np.cos(2 * np.pi * (fc + deltaf) * t + phi)
         baseband = mensaje * portadora
         b, a = butter_lowpass(4000, fs)
