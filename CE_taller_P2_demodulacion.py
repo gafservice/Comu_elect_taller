@@ -59,7 +59,7 @@ def main():
         def callback_inicial(indata, frames, time_info, status):
             nonlocal inicio_detectado, espectro_guardado, mensaje
             bloque = indata[:, 0]
-            detectado, f, S = detectar_tono(bloque, 4000, fs, margen=30, umbral=umbral_inicio)
+            detectado, f, S = detectar_tono(bloque, 7000, fs, margen=30, umbral=umbral_inicio)
             if detectado and not inicio_detectado:
                 inicio_detectado = True
                 mensaje.append(bloque.copy())

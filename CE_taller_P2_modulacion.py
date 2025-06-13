@@ -23,7 +23,7 @@ archivo_R_ISB = 'audio_alta.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.4
-TONO_INICIO = 4000
+TONO_INICIO = 7000
 TONO_FIN = 5000
 
 # === Funciones auxiliares ===
