@@ -9,7 +9,7 @@ import threading
 import matplotlib.pyplot as plt
 
 # === Parámetros ===
-fs = 48000
+fs = 44100
 duracion = 5
 archivo_estereo = 'audio_estereo.wav'
 archivo_mono = 'audio_mono.wav'
@@ -20,8 +20,8 @@ archivo_R_ISB = 'audio_R_ISB.wav'
 FS = 44100
 FC = 10000
 DUR_TONO = 0.2
-TONO_INICIO = 8000
-TONO_FIN = 15000
+TONO_INICIO = 7000
+TONO_FIN = 5000
 
 # === Funciones auxiliares ===
 def suavizar(audio, N=5):
@@ -29,7 +29,7 @@ def suavizar(audio, N=5):
 
 def generar_tono(freq, duracion, fs):
     t = np.arange(int(fs * duracion)) / fs
-    A = 0.7 # Amplitud del tono.
+    A = 0.7
     return A * np.sin(2 * np.pi * freq * t)
 
 def reproducir_senal(senal, fs):
@@ -44,92 +44,96 @@ def cargar_audio(nombre_archivo):
     audio /= np.max(np.abs(audio))
     return fs, audio
 
+def graficar_senal_tiempo_frecuencia(senal, fs, titulo, usar_analitica=False, max_magnitud=100):
+    t = np.arange(len(senal)) / fs
+    plt.figure(figsize=(12, 4))
+
+    plt.subplot(1, 2, 1)
+    if np.iscomplexobj(senal):
+        plt.plot(t, np.real(senal), label='Real')
+        plt.plot(t, np.imag(senal), label='Imag', alpha=0.5)
+        plt.legend()
+    else:
+        plt.plot(t, senal)
+    plt.title(f'{titulo} - Tiempo')
+    plt.xlabel('Tiempo [s]')
+    plt.ylabel('Amplitud')
+    plt.grid(True)
+
+    plt.subplot(1, 2, 2)
+    if usar_analitica and not np.iscomplexobj(senal):
+        senal = hilbert(senal)
+    N = len(senal)
+    espectro = np.abs(np.fft.fft(senal))
+    freqs = np.fft.fftfreq(N, 1/fs)
+    indices = np.where((freqs >= 0) & (freqs <= 20000))
+    espectro = np.clip(espectro[indices], 0, max_magnitud)
+    freqs = freqs[indices]
+
+    plt.plot(freqs, espectro)
+    plt.title(f'{titulo} - Frecuencia (0–20 kHz)')
+    plt.xlabel('Frecuencia [Hz]')
+    plt.ylabel('Magnitud')
+    plt.xlim([0, 20000])
+    plt.ylim([0, max_magnitud + 10])
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 def modulacion_ssb(audio, tipo):
     t = np.arange(len(audio)) / FS
-
     carrier_cos = np.cos(2*np.pi*FC*t)
     carrier_sin = np.sin(2*np.pi*FC*t)
-
-    #señal analitica (transformada de Hilbert).
     analytic = np.imag(hilbert(audio))
-
-    #Modulacion SSB-SC.
     if tipo == "USB":
-        ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # USB
-        return ssb_sc_usb
+        return np.real(audio * carrier_cos - analytic * carrier_sin)
     else:
-        ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # LSB
-        return ssb_sc_lsb
+        return np.real(audio * carrier_cos + analytic * carrier_sin)
 
 def modulacion_ssb_fc(audio, tipo):
     t = np.arange(len(audio)) / FS
-    
     carrier_cos = np.cos(2*np.pi*FC*t)
     carrier_sin = np.sin(2*np.pi*FC*t)
-
-    #señal analitica (transformada de Hilbert).
     analytic = np.imag(hilbert(audio))
-
-    #Modulacion SSB-FC.
     if tipo == "USB":
-        ssb_sc_usb = np.real(audio * carrier_cos - analytic * carrier_sin) # SC-USB
-        ssb_fc_usb = np.real(2 * carrier_cos + ssb_sc_usb) # USB, Ac = 2
-        return ssb_fc_usb    
+        return np.real(2 * carrier_cos + (audio * carrier_cos - analytic * carrier_sin))
     else:
-        ssb_sc_lsb = np.real(audio * carrier_cos + analytic * carrier_sin) # SC-LSB
-        ssb_fc_lsb = np.real(2 * carrier_cos + ssb_sc_lsb) # LSB, Ac = 2
-        return ssb_fc_lsb
+        return np.real(2 * carrier_cos + (audio * carrier_cos + analytic * carrier_sin))
 
 def modulacion_isb(audio_L, audio_R):
     t = np.arange(len(audio_L)) / FS
     carrier_cos = np.cos(2*np.pi*FC*t)
     carrier_sin = np.sin(2*np.pi*FC*t)
-    
-    #Señal analitica del segundo audio.
-    analytic = np.imag(hilbert(audio_L))
-    analytic2 = np.imag(hilbert(audio_R))
+    analyticL = np.imag(hilbert(audio_L))
+    analyticR = np.imag(hilbert(audio_R))
+    isb_usb = np.real(audio_L * carrier_cos - analyticL * carrier_sin)
+    isb_lsb = np.real(audio_R * carrier_cos + analyticR * carrier_sin)
+    return isb_usb + isb_lsb
 
-    #Modulacion ISB.
-    isb_usb = np.real(audio_L * carrier_cos - analytic * carrier_sin)
-    isb_lsb = np.real(audio_R * carrier_cos + analytic2 * carrier_sin)
-    isb = isb_usb + isb_lsb
-    return isb
-
-def fft_dB(senal_mod):
-    #FFT de la señal.
-    senal_fft = np.abs(np.fft.fft(senal_mod))
-    #conversion del espectro a dB.
-    senal_fft_db = 20 * np.log10(senal_fft)
-    return senal_fft_db
-
-# === Función auxiliar para actualizar estado durante la grabación ===
 def actualizar_tiempo(estado_var, grabando_flag, duracion):
     def actualizar(segundos=[0]):
         if not grabando_flag[0]:
             return
-        estado_var.set(f"🎙️ Grabando... {segundos[0]}s")
+        estado_var.set(f"🎧 Grabando... {segundos[0]}s")
         root.update()
         segundos[0] += 1
         if segundos[0] <= duracion:
             root.after(1000, lambda: actualizar(segundos))
     actualizar()
 
-# === Función: GRABAR ===
 def grabar_audio():
     thread = threading.Thread(target=grabar_en_hilo)
     thread.start()
 
 def grabar_en_hilo():
-    estado_var.set("🎙️ Preparando grabación...")
+    estado_var.set("🎧 Preparando grabación...")
     root.update()
     try:
-        dispositivo = None
-        for i, d in enumerate(sd.query_devices()):
-            if d['max_input_channels'] >= 2:
-                dispositivo = i
-                break
-        if dispositivo is None:
-            raise RuntimeError("No se encontró dispositivo de entrada estéreo.")
+        dispositivo = sd.default.device[0]
+        info = sd.query_devices(dispositivo)
+
+        if info['max_input_channels'] < 2:
+            raise RuntimeError("El dispositivo no tiene al menos 2 canales de entrada.")
 
         grabando_flag = [True]
         root.after(0, lambda: actualizar_tiempo(estado_var, grabando_flag, duracion))
@@ -138,22 +142,16 @@ def grabar_en_hilo():
         sd.wait()
         grabando_flag[0] = False
 
-        estado_var.set("💾 Guardando estéreo...")
+        estado_var.set("📃 Guardando estéreo...")
         root.update()
         write(archivo_estereo, fs, audio_estereo)
 
-        estado_var.set("🎚️ Procesando mono...")
+        estado_var.set("🎚 Procesando mono...")
         root.update()
         audio_mono = np.mean(audio_estereo, axis=1).astype(np.int16)
-        audio_mono_suave = suavizar(audio_mono)
-        write(archivo_mono, fs, audio_mono_suave)
+        write(archivo_mono, fs, suavizar(audio_mono))
 
-        estado_var.set("🎚️ Guardando ISB - L")
-        root.update()
         write(archivo_L_ISB, fs, audio_estereo[:, 0])
-
-        estado_var.set("🎚️ Guardando ISB - R ")
-        root.update()
         write(archivo_R_ISB, fs, audio_estereo[:, 1])
 
         estado_var.set("✅ Grabación y archivos Listos.")
@@ -163,7 +161,6 @@ def grabar_en_hilo():
         estado_var.set(f"❌ Error: {e}")
         print("[ERROR]", e)
 
-# === Función: REPRODUCIR ===
 def reproducir_todo():
     try:
         secuencias = [
@@ -187,12 +184,14 @@ def reproducir_todo():
         estado_var.set(f"❌ Error reproducción: {e}")
         print("[ERROR]", e)
 
-# === Funciones de botones de modulación ===
 def ejecutar_modulacion(tipo_modulacion, banda):
     try:
         fs, audio = cargar_audio(archivo_mono)
         estado_var.set(f"⚙️ Modulando {tipo_modulacion}-{banda}...")
         root.update()
+
+        graficar_senal_tiempo_frecuencia(audio, fs, "Audio Original", usar_analitica=True)
+
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
 
@@ -203,6 +202,8 @@ def ejecutar_modulacion(tipo_modulacion, banda):
         else:
             estado_var.set("❌ Tipo no reconocido")
             return
+
+        graficar_senal_tiempo_frecuencia(salida, fs, f"Modulada {tipo_modulacion}-{banda}", usar_analitica=True)
 
         total = np.concatenate((tono_i, salida, tono_f))
         estado_var.set(f"🔊 Reproduciendo {tipo_modulacion}-{banda}")
@@ -218,10 +219,16 @@ def ejecutar_isb():
         fsR, audioR = cargar_audio(archivo_R_ISB)
         estado_var.set("⚙️ Modulando ISB...")
         root.update()
+
+        graficar_senal_tiempo_frecuencia(audioL, fsL, "Audio L", usar_analitica=True)
+        graficar_senal_tiempo_frecuencia(audioR, fsR, "Audio R", usar_analitica=True)
+
         tono_i = generar_tono(TONO_INICIO, DUR_TONO, FS)
         tono_f = generar_tono(TONO_FIN, DUR_TONO, FS)
-
         isb = modulacion_isb(audioL, audioR)
+
+        graficar_senal_tiempo_frecuencia(isb, FS, "Modulada ISB", usar_analitica=True)
+
         total = np.concatenate((tono_i, isb, tono_f))
         estado_var.set("🔊 Reproduciendo ISB")
         reproducir_senal(total, FS)
@@ -241,7 +248,7 @@ botones = {
     "SSB-SCL":    (77, 216, 71, 15),
     "SSB-SCU":    (177, 216, 69, 15),
     "SSB-FCL":    (272, 216, 70, 15),
-    "SSB-FCU":  (78, 262, 69, 15),
+    "SSB-FCU":    (78, 262, 69, 15),
     "ISB":        (177, 262, 70, 15),
     "ESC":        (313, 384, 26, 13)
 }
@@ -257,32 +264,29 @@ canvas.pack()
 canvas.create_image(0, 0, anchor="nw", image=imagen_tk)
 
 estado_var = tk.StringVar(value="")
-tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(
-    x=70, y=315, width=260)
+tk.Label(root, textvariable=estado_var, bg="white", fg="black", font=("Arial", 14)).place(x=70, y=315, width=260)
 
-# === Botones funcionales ===
 for nombre, (x, y, w, h) in botones.items():
-    etiqueta = nombre if "SSB-FCL_2" not in nombre else "SSB-FCL"
-    if etiqueta == "GRABAR":
+    if nombre == "GRABAR":
         comando = grabar_audio
-    elif etiqueta == "REPRODUCIR":
+    elif nombre == "REPRODUCIR":
         comando = reproducir_todo
-    elif etiqueta == "ESC":
+    elif nombre == "ESC":
         comando = root.destroy
-    elif etiqueta == "SSB-SCL":
+    elif nombre == "SSB-SCL":
         comando = lambda: ejecutar_modulacion("SC", "LSB")
-    elif etiqueta == "SSB-SCU":
+    elif nombre == "SSB-SCU":
         comando = lambda: ejecutar_modulacion("SC", "USB")
-    elif etiqueta == "SSB-FCU":
+    elif nombre == "SSB-FCU":
         comando = lambda: ejecutar_modulacion("FC", "USB")
-    elif etiqueta == "SSB-FCL":
+    elif nombre == "SSB-FCL":
         comando = lambda: ejecutar_modulacion("FC", "LSB")
-    elif etiqueta == "ISB":
+    elif nombre == "ISB":
         comando = ejecutar_isb
     else:
-        comando = lambda n=etiqueta: estado_var.set(f"Presionado: {n}")
+        comando = lambda n=nombre: estado_var.set(f"Presionado: {n}")
 
-    tk.Button(root, text=etiqueta, command=comando,
+    tk.Button(root, text=nombre, command=comando,
               bg="#222", fg="white", font=("Arial", 9)).place(x=x, y=y, width=w, height=h)
 
 root.mainloop()
